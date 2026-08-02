@@ -1,136 +1,69 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
-// Categorization presets with colors and icons
+// Refined, subtle category color system (sleek & minimalist)
 export const EVENT_CATEGORIES = {
-  vacation: { label: 'Dovolená', emoji: '🏖️', color: '#f59e0b', bg: 'rgba(245, 158, 11, 0.15)', border: '#d97706' },
-  chata: { label: 'Chata / Víkend', emoji: '🏡', color: '#10b981', bg: 'rgba(16, 185, 129, 0.15)', border: '#059669' },
-  festival: { label: 'Festival / Akce', emoji: '🎪', color: '#ec4899', bg: 'rgba(236, 72, 153, 0.15)', border: '#db2777' },
-  trip: { label: 'Výlet / Cestování', emoji: '🚀', color: '#3b82f6', bg: 'rgba(59, 130, 246, 0.15)', border: '#2563eb' },
-  work: { label: 'Práce / Služebka', emoji: '💼', color: '#6b7280', bg: 'rgba(107, 114, 128, 0.15)', border: '#4b5563' },
-  free: { label: 'Volný den', emoji: '☀️', color: '#8b5cf6', bg: 'rgba(139, 92, 246, 0.15)', border: '#7c3aed' },
+  vacation: { label: 'Dovolená', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.12)', border: 'rgba(56, 189, 248, 0.3)' },
+  chata: { label: 'Chata / Víkend', color: '#34d399', bg: 'rgba(52, 211, 153, 0.12)', border: 'rgba(52, 211, 153, 0.3)' },
+  festival: { label: 'Festival / Akce', color: '#f472b6', bg: 'rgba(244, 114, 182, 0.12)', border: 'rgba(244, 114, 182, 0.3)' },
+  trip: { label: 'Výlet', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.12)', border: 'rgba(251, 191, 36, 0.3)' },
+  work: { label: 'Práce', color: '#9ca3af', bg: 'rgba(156, 163, 175, 0.12)', border: 'rgba(156, 163, 175, 0.3)' },
+  free: { label: 'Volno', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.12)', border: 'rgba(167, 139, 250, 0.3)' },
 };
 
-// Preset user colors for vibrant visual differentiation
 export const USER_COLORS = [
-  '#f59e0b', '#10b981', '#ec4899', '#3b82f6', 
-  '#8b5cf6', '#06b6d4', '#f97316', '#a855f7'
+  '#38bdf8', '#34d399', '#f472b6', '#fbbf24', 
+  '#a78bfa', '#fb7185', '#818cf8', '#2dd4bf'
 ];
 
-// Initial demo users
-const INITIAL_USERS = [
-  { id: 'u_admin', username: 'Admin', role: 'admin', color: '#ec4899', passwordHash: 'admin123' },
-  { id: 'u_kuba', username: 'Kuba', role: 'user', color: '#3b82f6', passwordHash: 'kuba123' },
-  { id: 'u_anet', username: 'Anet', role: 'user', color: '#10b981', passwordHash: 'anet123' },
-  { id: 'u_pavel', username: 'Pavel', role: 'user', color: '#f59e0b', passwordHash: 'pavel123' },
-  { id: 'u_terka', username: 'Terka', role: 'user', color: '#8b5cf6', passwordHash: 'terka123' },
-];
+// Clean initial state without fake sample data
+const INITIAL_USERS = [];
+const INITIAL_EVENTS = [];
 
-// Initial demo events for August 2026
-const INITIAL_EVENTS = [
-  {
-    id: 'e1',
-    userId: 'u_kuba',
-    userName: 'Kuba',
-    userColor: '#3b82f6',
-    title: 'Chorvatsko - Makarska',
-    startDate: '2026-08-05',
-    endDate: '2026-08-14',
-    category: 'vacation',
-    notes: 'Jedeme autem z Brna! 🚗'
-  },
-  {
-    id: 'e2',
-    userId: 'u_anet',
-    userName: 'Anet',
-    userColor: '#10b981',
-    title: 'Letní Festival',
-    startDate: '2026-08-14',
-    endDate: '2026-08-16',
-    category: 'festival',
-    notes: 'Kempování s partou'
-  },
-  {
-    id: 'e3',
-    userId: 'u_pavel',
-    userName: 'Pavel',
-    userColor: '#f59e0b',
-    title: 'Víkend na Chatě',
-    startDate: '2026-08-21',
-    endDate: '2026-08-23',
-    category: 'chata',
-    notes: 'Grilovačka u jezera 🥩🍻'
-  },
-  {
-    id: 'e4',
-    userId: 'u_terka',
-    userName: 'Terka',
-    userColor: '#8b5cf6',
-    title: 'Tatry Turistika',
-    startDate: '2026-08-24',
-    endDate: '2026-08-29',
-    category: 'trip',
-    notes: 'Výstup na Rysy'
-  }
-];
-
-// Helper Keys for LocalStorage
 const STORAGE_KEYS = {
-  USERS: 'group_cal_users_v1',
-  EVENTS: 'group_cal_events_v1',
-  CURRENT_USER: 'group_cal_current_user_v1'
+  USERS: 'group_cal_users_v2',
+  EVENTS: 'group_cal_events_v2',
+  CURRENT_USER: 'group_cal_current_user_v2'
 };
 
 export class StorageService {
-  // Load users from storage
   static getUsers() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.USERS);
-      if (!data) {
-        localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
-        return INITIAL_USERS;
-      }
-      return JSON.parse(data);
+      return data ? JSON.parse(data) : INITIAL_USERS;
     } catch {
       return INITIAL_USERS;
     }
   }
 
-  // Save users to storage
   static saveUsers(users) {
     localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
   }
 
-  // Load events from storage
   static async getEvents() {
     if (isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase.from('events').select('*').order('startDate', { ascending: true });
         if (!error && data) return data;
       } catch (err) {
-        console.warn('Supabase fetch failed, using fallback storage:', err);
+        console.warn('Supabase fetch failed:', err);
       }
     }
 
     try {
       const data = localStorage.getItem(STORAGE_KEYS.EVENTS);
-      if (!data) {
-        localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(INITIAL_EVENTS));
-        return INITIAL_EVENTS;
-      }
-      return JSON.parse(data);
+      return data ? JSON.parse(data) : INITIAL_EVENTS;
     } catch {
       return INITIAL_EVENTS;
     }
   }
 
-  // Save/Update event
   static async saveEvent(event) {
     if (isSupabaseConfigured()) {
       try {
         const { data, error } = await supabase.from('events').upsert([event]).select();
         if (!error && data) return data[0];
       } catch (err) {
-        console.warn('Supabase save failed:', err);
+        console.warn('Supabase save error:', err);
       }
     }
 
@@ -149,13 +82,12 @@ export class StorageService {
     return event;
   }
 
-  // Delete event
   static async deleteEvent(eventId) {
     if (isSupabaseConfigured()) {
       try {
         await supabase.from('events').delete().eq('id', eventId);
       } catch (err) {
-        console.warn('Supabase delete failed:', err);
+        console.warn('Supabase delete error:', err);
       }
     }
 
@@ -164,7 +96,6 @@ export class StorageService {
     localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(updatedEvents));
   }
 
-  // Get logged in user
   static getCurrentUser() {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
@@ -174,7 +105,6 @@ export class StorageService {
     }
   }
 
-  // Set logged in user
   static setCurrentUser(user) {
     if (user) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
@@ -183,27 +113,24 @@ export class StorageService {
     }
   }
 
-  // User Auth - Login
   static login(username, password) {
     const users = this.getUsers();
     const cleanName = username.trim().toLowerCase();
     const user = users.find(u => u.username.toLowerCase() === cleanName);
 
     if (!user) {
-      throw new Error('Uživatel s tímto jménem neexistuje.');
+      throw new Error('Uživatel s tímto jménem neexistuje. Založte si nový účet.');
     }
 
     if (user.passwordHash !== password) {
-      throw new Error('Nespravné heslo.');
+      throw new Error('Nesprávné heslo.');
     }
 
-    // Save session
     const sessionUser = { id: user.id, username: user.username, role: user.role, color: user.color };
     this.setCurrentUser(sessionUser);
     return sessionUser;
   }
 
-  // User Auth - Register
   static register(username, password) {
     const users = this.getUsers();
     const cleanName = username.trim();
@@ -220,13 +147,13 @@ export class StorageService {
       throw new Error('Uživatel s tímto jménem již existuje.');
     }
 
-    // Assign random user color
+    const isFirstUser = users.length === 0;
     const userColor = USER_COLORS[users.length % USER_COLORS.length];
 
     const newUser = {
       id: `u_${Date.now()}`,
       username: cleanName,
-      role: 'user',
+      role: isFirstUser ? 'admin' : 'user', // First registered user is Admin automatically!
       color: userColor,
       passwordHash: password
     };
@@ -239,7 +166,6 @@ export class StorageService {
     return sessionUser;
   }
 
-  // Admin - Reset user password
   static adminResetPassword(adminUserId, targetUserId, newPassword) {
     const currentUser = this.getCurrentUser();
     if (!currentUser || currentUser.role !== 'admin') {
@@ -255,15 +181,5 @@ export class StorageService {
     targetUser.passwordHash = newPassword;
     this.saveUsers(users);
     return true;
-  }
-
-  // Admin - Reset all data back to demo
-  static resetDemoData() {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(INITIAL_USERS));
-    localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(INITIAL_EVENTS));
-    const admin = INITIAL_USERS[0];
-    const sessionUser = { id: admin.id, username: admin.username, role: admin.role, color: admin.color };
-    this.setCurrentUser(sessionUser);
-    return { users: INITIAL_USERS, events: INITIAL_EVENTS, currentUser: sessionUser };
   }
 }

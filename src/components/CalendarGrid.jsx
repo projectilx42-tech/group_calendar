@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Sun, Calendar as CalendarIcon, Filter, Eye } from 'lucide-react';
+import React from 'react';
+import { ChevronLeft, ChevronRight, Filter } from 'lucide-react';
 import { EVENT_CATEGORIES } from '../services/storage';
 
 const CZECH_MONTHS = [
@@ -22,86 +22,73 @@ export const CalendarGrid = ({
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth();
 
-  // Helper to format date string YYYY-MM-DD
   const formatDateString = (y, m, d) => {
     const mm = String(m + 1).padStart(2, '0');
     const dd = String(d).padStart(2, '0');
     return `${y}-${mm}-${dd}`;
   };
 
-  // Get total days in month
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  
-  // Get starting day of week (0 = Sun, 1 = Mon, ... converted to Mon=0)
   const firstDayOfWeek = new Date(year, month, 1).getDay();
   const startOffset = (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1);
 
-  // Month navigation
   const prevMonth = () => onDateChange(new Date(year, month - 1, 1));
   const nextMonth = () => onDateChange(new Date(year, month + 1, 1));
-  const goToAugust = () => onDateChange(new Date(2026, 7, 1)); // August 2026
+  const goToToday = () => onDateChange(new Date());
 
-  // Filter events
   const filteredEvents = events.filter(e => {
     if (selectedUserFilter && e.userId !== selectedUserFilter) return false;
     return true;
   });
 
-  // Helper to check if event falls on date YYYY-MM-DD
   const getEventsForDate = (dateStr) => {
-    return filteredEvents.filter(e => {
-      return dateStr >= e.startDate && dateStr <= e.endDate;
-    });
+    return filteredEvents.filter(e => dateStr >= e.startDate && dateStr <= e.endDate);
   };
 
   const todayStr = formatDateString(new Date().getFullYear(), new Date().getMonth(), new Date().getDate());
 
   return (
     <div className="calendar-card glass-card">
-      {/* Calendar Header Controls */}
+      {/* Calendar Top Bar */}
       <div className="calendar-header">
         <div className="month-title-group">
           <h2 className="month-title">
             {CZECH_MONTHS[month]} <span className="year-title">{year}</span>
           </h2>
-          {month === 7 && year === 2026 && (
-            <span className="summer-highlight-pill">
-              <Sun size={14} /> Vrchol Prázdnin!
-            </span>
-          )}
         </div>
 
         <div className="calendar-controls">
-          {/* Filter by Friend Dropdown */}
-          <div className="filter-dropdown-wrapper">
-            <Filter size={15} className="filter-icon" />
-            <select 
-              className="user-filter-select"
-              value={selectedUserFilter || ''} 
-              onChange={(e) => onUserFilterChange(e.target.value || null)}
-            >
-              <option value="">Všichni přátelé</option>
-              {users.map(u => (
-                <option key={u.id} value={u.id}>{u.username}</option>
-              ))}
-            </select>
-          </div>
+          {users.length > 0 && (
+            <div className="filter-dropdown-wrapper">
+              <Filter size={14} className="filter-icon" />
+              <select 
+                className="user-filter-select"
+                value={selectedUserFilter || ''} 
+                onChange={(e) => onUserFilterChange(e.target.value || null)}
+              >
+                <option value="">Všichni ({users.length})</option>
+                {users.map(u => (
+                  <option key={u.id} value={u.id}>{u.username}</option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="nav-buttons">
-            <button className="btn btn-secondary btn-sm" onClick={goToAugust} title="Skočit na Srpen 2026">
-              <Sun size={14} /> <span className="hide-mobile">Srpen 2026</span>
+            <button className="btn btn-secondary btn-sm" onClick={goToToday}>
+              Dnes
             </button>
-            <button className="btn btn-secondary btn-sm" onClick={prevMonth}>
+            <button className="btn btn-secondary btn-sm icon-only" onClick={prevMonth} aria-label="Předchozí měsíc">
               <ChevronLeft size={16} />
             </button>
-            <button className="btn btn-secondary btn-sm" onClick={nextMonth}>
+            <button className="btn btn-secondary btn-sm icon-only" onClick={nextMonth} aria-label="Následující měsíc">
               <ChevronRight size={16} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Weekdays Row */}
+      {/* Weekdays Header */}
       <div className="weekdays-grid">
         {WEEK_DAYS.map((day, idx) => (
           <div key={day} className={`weekday-cell ${idx >= 5 ? 'weekend' : ''}`}>
@@ -112,12 +99,10 @@ export const CalendarGrid = ({
 
       {/* Days Grid */}
       <div className="days-grid">
-        {/* Blank offset cells for previous month */}
         {Array.from({ length: startOffset }).map((_, idx) => (
           <div key={`blank-${idx}`} className="day-cell day-blank" />
         ))}
 
-        {/* Month Days */}
         {Array.from({ length: daysInMonth }).map((_, idx) => {
           const dayNum = idx + 1;
           const dateStr = formatDateString(year, month, dayNum);
@@ -134,42 +119,39 @@ export const CalendarGrid = ({
             >
               <div className="day-number-row">
                 <span className={`day-number ${isToday ? 'today-number' : ''}`}>{dayNum}</span>
-                {dayEvents.length > 0 && (
-                  <span className="event-count-dot" title={`${dayEvents.length} akce`}>
-                    {dayEvents.length}
-                  </span>
-                )}
               </div>
 
-              {/* Event Cards inside Day Cell */}
+              {/* Event Indicators */}
               <div className="day-events-container">
                 {dayEvents.slice(0, 3).map(evt => {
                   const catConfig = EVENT_CATEGORIES[evt.category] || EVENT_CATEGORIES.vacation;
+                  const isStart = dateStr === evt.startDate;
+                  const isEnd = dateStr === evt.endDate;
+
                   return (
                     <div 
                       key={evt.id}
-                      className="event-pill"
+                      className={`event-bar ${isStart ? 'is-start' : ''} ${isEnd ? 'is-end' : ''}`}
                       style={{
                         backgroundColor: catConfig.bg,
-                        borderColor: evt.userColor || catConfig.border,
-                        color: '#ffffff'
+                        borderLeftColor: evt.userColor || catConfig.color,
+                        color: '#f8fafc'
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
                         onSelectEvent(evt);
                       }}
                     >
-                      <span className="user-dot" style={{ backgroundColor: evt.userColor }} />
-                      <span className="event-emoji">{catConfig.emoji}</span>
-                      <span className="event-name">{evt.userName}: {evt.title}</span>
+                      <span className="user-dot" style={{ backgroundColor: evt.userColor || catConfig.color }} />
+                      <span className="event-title-text">
+                        {isStart ? `${evt.userName}: ${evt.title}` : evt.title}
+                      </span>
                     </div>
                   );
                 })}
 
                 {dayEvents.length > 3 && (
-                  <div className="more-events-indicator">
-                    +{dayEvents.length - 3} další
-                  </div>
+                  <span className="more-count">+{dayEvents.length - 3} další</span>
                 )}
               </div>
             </div>

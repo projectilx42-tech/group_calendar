@@ -1,6 +1,5 @@
 import React from 'react';
 import { EVENT_CATEGORIES } from '../services/storage';
-import { Sparkles, Calendar as CalendarIcon } from 'lucide-react';
 
 export const TimelineView = ({ currentDate, events, users, onSelectEvent }) => {
   const year = currentDate.getFullYear();
@@ -15,36 +14,35 @@ export const TimelineView = ({ currentDate, events, users, onSelectEvent }) => {
 
   const daysArray = Array.from({ length: daysInMonth }, (_, i) => i + 1);
 
+  if (users.length === 0) {
+    return (
+      <div className="timeline-card glass-card empty-state-card">
+        Zatím zde nejsou žádní uživatelé. Přihlaste se a vytvořte svůj účet.
+      </div>
+    );
+  }
+
   return (
     <div className="timeline-card glass-card">
       <div className="timeline-header">
         <div className="timeline-title-group">
-          <h3><Sparkles size={18} className="icon-glow" /> Osa dovolených a volných dnů</h3>
-          <p className="subtitle">Přehledný časový diagram pro rychlé nalezení společných dnů</p>
+          <h3>Časový přehled (Timeline)</h3>
         </div>
       </div>
 
       <div className="timeline-scroll-container">
         <div className="timeline-table">
-          {/* Header Row (Days of Month) */}
           <div className="timeline-row timeline-header-row">
-            <div className="timeline-user-col">Kamarád</div>
+            <div className="timeline-user-col">Uživatel</div>
             <div className="timeline-days-grid">
-              {daysArray.map(d => {
-                const dateObj = new Date(year, month, d);
-                const dayOfWeek = dateObj.getDay();
-                const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-
-                return (
-                  <div key={d} className={`timeline-day-header ${isWeekend ? 'weekend' : ''}`}>
-                    <span className="timeline-day-num">{d}</span>
-                  </div>
-                );
-              })}
+              {daysArray.map(d => (
+                <div key={d} className="timeline-day-header">
+                  {d}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* User Rows */}
           {users.map(u => {
             const userEvents = events.filter(e => e.userId === u.id);
 
@@ -60,7 +58,6 @@ export const TimelineView = ({ currentDate, events, users, onSelectEvent }) => {
                 <div className="timeline-days-grid">
                   {daysArray.map(d => {
                     const dateStr = formatDateString(d);
-                    // Find active event on dateStr
                     const activeEvt = userEvents.find(e => dateStr >= e.startDate && dateStr <= e.endDate);
 
                     if (!activeEvt) {
@@ -69,22 +66,21 @@ export const TimelineView = ({ currentDate, events, users, onSelectEvent }) => {
 
                     const catConfig = EVENT_CATEGORIES[activeEvt.category] || EVENT_CATEGORIES.vacation;
                     const isStart = dateStr === activeEvt.startDate;
-                    const isEnd = dateStr === activeEvt.endDate;
 
                     return (
                       <div 
                         key={d} 
-                        className={`timeline-cell active ${isStart ? 'start' : ''} ${isEnd ? 'end' : ''}`}
+                        className={`timeline-cell active ${isStart ? 'start' : ''}`}
                         style={{
                           backgroundColor: catConfig.bg,
-                          borderColor: u.color || catConfig.border
+                          borderColor: u.color || catConfig.color
                         }}
                         onClick={() => onSelectEvent(activeEvt)}
-                        title={`${u.username}: ${activeEvt.title} (${activeEvt.startDate} až ${activeEvt.endDate})`}
+                        title={`${u.username}: ${activeEvt.title}`}
                       >
                         {isStart && (
                           <span className="timeline-pill-text">
-                            {catConfig.emoji} {activeEvt.title}
+                            {activeEvt.title}
                           </span>
                         )}
                       </div>
