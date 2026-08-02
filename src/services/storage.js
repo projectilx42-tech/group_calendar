@@ -1,185 +1,76 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 
-// Refined, subtle category color system (sleek & minimalist)
 export const EVENT_CATEGORIES = {
-  vacation: { label: 'Dovolená', color: '#38bdf8', bg: 'rgba(56, 189, 248, 0.12)', border: 'rgba(56, 189, 248, 0.3)' },
-  chata: { label: 'Chata / Víkend', color: '#34d399', bg: 'rgba(52, 211, 153, 0.12)', border: 'rgba(52, 211, 153, 0.3)' },
-  festival: { label: 'Festival / Akce', color: '#f472b6', bg: 'rgba(244, 114, 182, 0.12)', border: 'rgba(244, 114, 182, 0.3)' },
-  trip: { label: 'Výlet', color: '#fbbf24', bg: 'rgba(251, 191, 36, 0.12)', border: 'rgba(251, 191, 36, 0.3)' },
-  work: { label: 'Práce', color: '#9ca3af', bg: 'rgba(156, 163, 175, 0.12)', border: 'rgba(156, 163, 175, 0.3)' },
-  free: { label: 'Volno', color: '#a78bfa', bg: 'rgba(167, 139, 250, 0.12)', border: 'rgba(167, 139, 250, 0.3)' },
+  free: { label: 'Mám čas', color: '#3d7a5c', bg: '#e8f3ec', border: '#c9dfd1' },
+  busy: { label: 'Nemám čas', color: '#a44b43', bg: '#f9ecea', border: '#efd0cc' },
+  maybe: { label: 'Ještě nevím', color: '#9a6b25', bg: '#faf3e4', border: '#ead9b4' },
+  trip: { label: 'Mimo město', color: '#506f9d', bg: '#edf2f9', border: '#d3deee' },
 };
 
-export const USER_COLORS = [
-  '#38bdf8', '#34d399', '#f472b6', '#fbbf24', 
-  '#a78bfa', '#fb7185', '#818cf8', '#2dd4bf'
-];
+export const USER_COLORS = ['#2f6fed', '#9d5c3d', '#69774c', '#8059a5', '#23857b', '#b05c71'];
 
-// Clean initial state without fake sample data
-const INITIAL_USERS = [];
-const INITIAL_EVENTS = [];
+const KEYS = {
+  user: 'kdyspolu_device_identity_v1',
+  events: 'kdyspolu_events_v1',
+};
 
-const STORAGE_KEYS = {
-  USERS: 'group_cal_users_v2',
-  EVENTS: 'group_cal_events_v2',
-  CURRENT_USER: 'group_cal_current_user_v2'
+const read = (key, fallback) => {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
 };
 
 export class StorageService {
+  static getCurrentUser() { return read(KEYS.user, null); }
+  static setCurrentUser(user) {
+    if (user) localStorage.setItem(KEYS.user, JSON.stringify(user));
+    else localStorage.removeItem(KEYS.user);
+  }
   static getUsers() {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.USERS);
-      return data ? JSON.parse(data) : INITIAL_USERS;
-    } catch {
-      return INITIAL_USERS;
-    }
+    const me = this.getCurrentUser();
+    const events = read(KEYS.events, []);
+    const fromEvents = events.reduce((all, event) => {
+      if (event.userId && !all.some(user => user.id === event.userId)) {
+        all.push({ id: event.userId, username: event.userName, color: event.userColor });
+      }
+      return all;
+    }, []);
+    return me && !fromEvents.some(user => user.id === me.id) ? [me, ...fromEvents] : fromEvents;
   }
-
-  static saveUsers(users) {
-    localStorage.setItem(STORAGE_KEYS.USERS, JSON.stringify(users));
-  }
-
   static async getEvents() {
     if (isSupabaseConfigured()) {
-      try {
-        const { data, error } = await supabase.from('events').select('*').order('startDate', { ascending: true });
-        if (!error && data) return data;
-      } catch (err) {
-        console.warn('Supabase fetch failed:', err);
-      }
+      const { data, error } = await supabase.from('events').select('*').order('startDate', { ascending: true });
+      if (!error && data) return data;
+      console.warn('Cloud data could not be loaded, using this device only.', error);
     }
-
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.EVENTS);
-      return data ? JSON.parse(data) : INITIAL_EVENTS;
-    } catch {
-      return INITIAL_EVENTS;
-    }
+    return read(KEYS.events, []);
   }
-
   static async saveEvent(event) {
     if (isSupabaseConfigured()) {
-      try {
-        const { data, error } = await supabase.from('events').upsert([event]).select();
-        if (!error && data) return data[0];
-      } catch (err) {
-        console.warn('Supabase save error:', err);
-      }
+      const { data, error } = await supabase.from('events').upsert(event).select().single();
+      if (!error && data) return data;
+      if (error) throw new Error('Změnu se nepodařilo uložit do společného kalendáře.');
     }
-
-    const events = await this.getEvents();
-    const existingIndex = events.findIndex(e => e.id === event.id);
-    let updatedEvents;
-
-    if (existingIndex >= 0) {
-      updatedEvents = [...events];
-      updatedEvents[existingIndex] = event;
-    } else {
-      updatedEvents = [...events, event];
-    }
-
-    localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(updatedEvents));
+    const events = read(KEYS.events, []);
+    const index = events.findIndex(item => item.id === event.id);
+    const updated = index === -1 ? [...events, event] : events.map(item => item.id === event.id ? event : item);
+    localStorage.setItem(KEYS.events, JSON.stringify(updated));
     return event;
   }
-
-  static async deleteEvent(eventId) {
+  static async deleteEvent(id) {
     if (isSupabaseConfigured()) {
-      try {
-        await supabase.from('events').delete().eq('id', eventId);
-      } catch (err) {
-        console.warn('Supabase delete error:', err);
-      }
+      const { error } = await supabase.from('events').delete().eq('id', id);
+      if (error) throw new Error('Záznam se nepodařilo smazat.');
     }
-
-    const events = await this.getEvents();
-    const updatedEvents = events.filter(e => e.id !== eventId);
-    localStorage.setItem(STORAGE_KEYS.EVENTS, JSON.stringify(updatedEvents));
+    localStorage.setItem(KEYS.events, JSON.stringify(read(KEYS.events, []).filter(event => event.id !== id)));
   }
-
-  static getCurrentUser() {
-    try {
-      const data = localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
-      return data ? JSON.parse(data) : null;
-    } catch {
-      return null;
-    }
-  }
-
-  static setCurrentUser(user) {
-    if (user) {
-      localStorage.setItem(STORAGE_KEYS.CURRENT_USER, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.CURRENT_USER);
-    }
-  }
-
-  static login(username, password) {
-    const users = this.getUsers();
-    const cleanName = username.trim().toLowerCase();
-    const user = users.find(u => u.username.toLowerCase() === cleanName);
-
-    if (!user) {
-      throw new Error('Uživatel s tímto jménem neexistuje. Založte si nový účet.');
-    }
-
-    if (user.passwordHash !== password) {
-      throw new Error('Nesprávné heslo.');
-    }
-
-    const sessionUser = { id: user.id, username: user.username, role: user.role, color: user.color };
-    this.setCurrentUser(sessionUser);
-    return sessionUser;
-  }
-
-  static register(username, password) {
-    const users = this.getUsers();
-    const cleanName = username.trim();
-
-    if (!cleanName || cleanName.length < 2) {
-      throw new Error('Jméno musí mít alespoň 2 znaky.');
-    }
-
-    if (!password || password.length < 3) {
-      throw new Error('Heslo musí mít alespoň 3 znaky.');
-    }
-
-    if (users.some(u => u.username.toLowerCase() === cleanName.toLowerCase())) {
-      throw new Error('Uživatel s tímto jménem již existuje.');
-    }
-
-    const isFirstUser = users.length === 0;
-    const userColor = USER_COLORS[users.length % USER_COLORS.length];
-
-    const newUser = {
-      id: `u_${Date.now()}`,
-      username: cleanName,
-      role: isFirstUser ? 'admin' : 'user', // First registered user is Admin automatically!
-      color: userColor,
-      passwordHash: password
+  static createDeviceIdentity(name) {
+    const username = name.trim();
+    if (username.length < 2) throw new Error('Napiš prosím jméno alespoň ze 2 znaků.');
+    const user = {
+      id: crypto.randomUUID?.() || `device_${Date.now()}`,
+      username,
+      color: USER_COLORS[Math.floor(Math.random() * USER_COLORS.length)],
     };
-
-    const updatedUsers = [...users, newUser];
-    this.saveUsers(updatedUsers);
-
-    const sessionUser = { id: newUser.id, username: newUser.username, role: newUser.role, color: newUser.color };
-    this.setCurrentUser(sessionUser);
-    return sessionUser;
-  }
-
-  static adminResetPassword(adminUserId, targetUserId, newPassword) {
-    const currentUser = this.getCurrentUser();
-    if (!currentUser || currentUser.role !== 'admin') {
-      throw new Error('Pouze administrátor může resetovat hesla.');
-    }
-
-    const users = this.getUsers();
-    const targetUser = users.find(u => u.id === targetUserId);
-    if (!targetUser) {
-      throw new Error('Uživatel nenalezen.');
-    }
-
-    targetUser.passwordHash = newPassword;
-    this.saveUsers(users);
-    return true;
+    this.setCurrentUser(user);
+    return user;
   }
 }

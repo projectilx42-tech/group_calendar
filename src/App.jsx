@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { StorageService } from './services/storage';
 import { Navbar } from './components/Navbar';
 import { MobileNav } from './components/MobileNav';
@@ -7,182 +7,36 @@ import { TimelineView } from './components/TimelineView';
 import { GroupOverview } from './components/GroupOverview';
 import { EventModal } from './components/EventModal';
 import { AuthModal } from './components/AuthModal';
-import { AdminModal } from './components/AdminModal';
 import './App.css';
 
+const collectUsers = (events, me) => {
+  const people = events.reduce((all, event) => all.some(person => person.id === event.userId) ? all : [...all, { id: event.userId, username: event.userName, color: event.userColor }], []);
+  return me && !people.some(person => person.id === me.id) ? [me, ...people] : people;
+};
+
 export function App() {
-  // Default to August 2026 for summer calendar focus
-  const [currentDate, setCurrentDate] = useState(new Date(2026, 7, 1));
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [currentUser, setCurrentUser] = useState(StorageService.getCurrentUser());
-  const [users, setUsers] = useState(StorageService.getUsers());
-  const [events, setEvents] = useState([]);
-  
-  // UI Filters and Mobile Navigation
-  const [selectedUserFilter, setSelectedUserFilter] = useState(null);
-  const [activeMobileTab, setActiveMobileTab] = useState('calendar'); // 'calendar' | 'timeline' | 'group'
-
-  // Modal States
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [isAdminOpen, setIsAdminOpen] = useState(false);
-  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
-  const [eventToEdit, setEventToEdit] = useState(null);
-  const [prefilledDate, setPrefilledDate] = useState('');
-
-  // Initial Data Fetch
-  const reloadData = async () => {
-    setUsers(StorageService.getUsers());
-    const loadedEvents = await StorageService.getEvents();
-    setEvents(loadedEvents);
-  };
-
-  useEffect(() => {
-    reloadData();
-    // Auto prompt login if not logged in
-    if (!StorageService.getCurrentUser()) {
-      setIsAuthOpen(true);
-    }
-  }, []);
-
-  // Handlers for Event Management
-  const handleOpenAddEvent = (dateStr = '') => {
-    if (!currentUser) {
-      setIsAuthOpen(true);
-      return;
-    }
-    setEventToEdit(null);
-    setPrefilledDate(dateStr);
-    setIsEventModalOpen(true);
-  };
-
-  const handleSelectEvent = (evt) => {
-    setEventToEdit(evt);
-    setIsEventModalOpen(true);
-  };
-
-  const handleSaveEvent = async (eventData) => {
-    await StorageService.saveEvent(eventData);
-    await reloadData();
-  };
-
-  const handleDeleteEvent = async (eventId) => {
-    await StorageService.deleteEvent(eventId);
-    await reloadData();
-  };
-
-  // Auth Handlers
-  const handleLoginSuccess = (user) => {
-    setCurrentUser(user);
-    reloadData();
-  };
-
-  const handleLogout = () => {
-    StorageService.setCurrentUser(null);
-    setCurrentUser(null);
-  };
-
-  const handleDataReset = (resetData) => {
-    setUsers(resetData.users);
-    setEvents(resetData.events);
-    setCurrentUser(resetData.currentUser);
-  };
-
-  return (
-    <div className="app-container">
-      {/* Top Navbar */}
-      <Navbar 
-        currentUser={currentUser}
-        onOpenAuth={() => setIsAuthOpen(true)}
-        onLogout={handleLogout}
-        onOpenAdmin={() => setIsAdminOpen(true)}
-        onAddEvent={() => handleOpenAddEvent()}
-      />
-
-      {/* Main Content Area */}
-      <main className="main-content">
-        <div className="primary-view-column">
-          {/* Mobile view switcher or Desktop layout */}
-          {activeMobileTab === 'calendar' && (
-            <CalendarGrid 
-              currentDate={currentDate}
-              onDateChange={setCurrentDate}
-              events={events}
-              selectedUserFilter={selectedUserFilter}
-              onUserFilterChange={setSelectedUserFilter}
-              onSelectEvent={handleSelectEvent}
-              onDayClick={(dateStr) => handleOpenAddEvent(dateStr)}
-              users={users}
-            />
-          )}
-
-          {activeMobileTab === 'timeline' && (
-            <TimelineView 
-              currentDate={currentDate}
-              events={events}
-              users={users}
-              onSelectEvent={handleSelectEvent}
-            />
-          )}
-
-          {/* Desktop Timeline Section always visible below calendar if tab is calendar */}
-          {activeMobileTab === 'calendar' && (
-            <div className="desktop-timeline-wrapper" style={{ marginTop: '24px' }}>
-              <TimelineView 
-                currentDate={currentDate}
-                events={events}
-                users={users}
-                onSelectEvent={handleSelectEvent}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* Sidebar / Group Overview Column */}
-        <div className={`sidebar-column ${activeMobileTab === 'group' ? 'mobile-show' : 'mobile-hide-on-desktop'}`}>
-          <GroupOverview 
-            users={users}
-            events={events}
-            currentDate={currentDate}
-            onSelectUser={(uId) => setSelectedUserFilter(uId)}
-            selectedUserFilter={selectedUserFilter}
-          />
-        </div>
-      </main>
-
-      {/* Mobile Touch Bottom Navigation Bar */}
-      <MobileNav 
-        activeTab={activeMobileTab}
-        setActiveTab={setActiveMobileTab}
-        currentUser={currentUser}
-        onAddEvent={() => handleOpenAddEvent()}
-        onOpenAdmin={() => setIsAdminOpen(true)}
-      />
-
-      {/* Modals */}
-      <EventModal 
-        isOpen={isEventModalOpen}
-        onClose={() => setIsEventModalOpen(false)}
-        eventToEdit={eventToEdit}
-        prefilledDate={prefilledDate}
-        currentUser={currentUser}
-        users={users}
-        onSave={handleSaveEvent}
-        onDelete={handleDeleteEvent}
-      />
-
-      <AuthModal 
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        onLoginSuccess={handleLoginSuccess}
-      />
-
-      <AdminModal 
-        isOpen={isAdminOpen}
-        onClose={() => setIsAdminOpen(false)}
-        currentUser={currentUser}
-        onDataReset={handleDataReset}
-      />
-    </div>
-  );
+  const [events, setEvents] = useState([]); const [users, setUsers] = useState([]);
+  const [selectedUserFilter, setSelectedUserFilter] = useState(null); const [activeMobileTab, setActiveMobileTab] = useState('calendar');
+  const [isAuthOpen, setIsAuthOpen] = useState(false); const [isEventOpen, setIsEventOpen] = useState(false); const [eventToEdit, setEventToEdit] = useState(null); const [prefilledDate, setPrefilledDate] = useState('');
+  const reload = async () => { const nextEvents = await StorageService.getEvents(); setEvents(nextEvents); setUsers(collectUsers(nextEvents, StorageService.getCurrentUser())); };
+  useEffect(() => { reload(); if (!StorageService.getCurrentUser()) setIsAuthOpen(true); }, []);
+  const openAdd = (date = '') => { if (!currentUser) return setIsAuthOpen(true); setPrefilledDate(date); setEventToEdit(null); setIsEventOpen(true); };
+  const login = user => { setCurrentUser(user); setUsers(current => current.some(person => person.id === user.id) ? current : [user, ...current]); };
+  const logout = () => { StorageService.setCurrentUser(null); setCurrentUser(null); setIsAuthOpen(true); };
+  return <div className="app-container">
+    <Navbar currentUser={currentUser} onOpenAuth={() => setIsAuthOpen(true)} onLogout={logout} onAddEvent={() => openAdd()} />
+    <main className="main-content">
+      <section className="primary-view-column">
+        {activeMobileTab === 'calendar' && <><div className="intro"><p className="eyebrow">SPOLEČNÝ ČAS, BEZ CHAOSU</p><h1>Domluvit se může být<br /><em>jednoduché.</em></h1><p>Označ, kdy máš čas. Hned uvidíš, jak to mají ostatní.</p></div><CalendarGrid currentDate={currentDate} onDateChange={setCurrentDate} events={events} selectedUserFilter={selectedUserFilter} onUserFilterChange={setSelectedUserFilter} onSelectEvent={event => { setEventToEdit(event); setIsEventOpen(true); }} onDayClick={openAdd} users={users} /><div className="desktop-timeline-wrapper"><TimelineView currentDate={currentDate} events={events} users={users} onSelectEvent={event => { setEventToEdit(event); setIsEventOpen(true); }} /></div></>}
+        {activeMobileTab === 'timeline' && <TimelineView currentDate={currentDate} events={events} users={users} onSelectEvent={event => { setEventToEdit(event); setIsEventOpen(true); }} />}
+      </section>
+      <aside className={`sidebar-column ${activeMobileTab === 'group' ? 'mobile-show' : ''}`}><GroupOverview users={users} events={events} currentDate={currentDate} onSelectUser={setSelectedUserFilter} selectedUserFilter={selectedUserFilter} /></aside>
+    </main>
+    <MobileNav activeTab={activeMobileTab} setActiveTab={setActiveMobileTab} currentUser={currentUser} onAddEvent={() => openAdd()} />
+    <EventModal isOpen={isEventOpen} onClose={() => setIsEventOpen(false)} eventToEdit={eventToEdit} prefilledDate={prefilledDate} currentUser={currentUser} onSave={async event => { await StorageService.saveEvent(event); await reload(); }} onDelete={async id => { await StorageService.deleteEvent(id); await reload(); }} />
+    <AuthModal isOpen={isAuthOpen} onClose={() => currentUser && setIsAuthOpen(false)} onLoginSuccess={user => { login(user); setIsAuthOpen(false); }} />
+  </div>;
 }
-
 export default App;
