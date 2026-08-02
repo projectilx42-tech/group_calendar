@@ -17,19 +17,21 @@ const collectUsers = (events, me) => {
 export function App() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [currentUser, setCurrentUser] = useState(StorageService.getCurrentUser());
+  const [isDarkMode, setIsDarkMode] = useState(() => localStorage.getItem('kdyspolu_theme') === 'dark');
   const [events, setEvents] = useState([]); const [users, setUsers] = useState([]);
   const [selectedUserFilter, setSelectedUserFilter] = useState(null); const [activeMobileTab, setActiveMobileTab] = useState('calendar');
   const [isAuthOpen, setIsAuthOpen] = useState(false); const [isEventOpen, setIsEventOpen] = useState(false); const [eventToEdit, setEventToEdit] = useState(null); const [prefilledDate, setPrefilledDate] = useState('');
   const reload = async () => { const nextEvents = await StorageService.getEvents(); setEvents(nextEvents); setUsers(collectUsers(nextEvents, StorageService.getCurrentUser())); };
   useEffect(() => { reload(); if (!StorageService.getCurrentUser()) setIsAuthOpen(true); }, []);
+  useEffect(() => { document.documentElement.dataset.theme = isDarkMode ? 'dark' : 'light'; localStorage.setItem('kdyspolu_theme', isDarkMode ? 'dark' : 'light'); }, [isDarkMode]);
   const openAdd = (date = '') => { if (!currentUser) return setIsAuthOpen(true); setPrefilledDate(date); setEventToEdit(null); setIsEventOpen(true); };
   const login = user => { setCurrentUser(user); setUsers(current => current.some(person => person.id === user.id) ? current : [user, ...current]); };
   const logout = () => { StorageService.setCurrentUser(null); setCurrentUser(null); setIsAuthOpen(true); };
   return <div className="app-container">
-    <Navbar currentUser={currentUser} onOpenAuth={() => setIsAuthOpen(true)} onLogout={logout} onAddEvent={() => openAdd()} />
+    <Navbar currentUser={currentUser} isDarkMode={isDarkMode} onToggleTheme={() => setIsDarkMode(value => !value)} onOpenAuth={() => setIsAuthOpen(true)} onLogout={logout} onAddEvent={() => openAdd()} />
     <main className="main-content">
       <section className="primary-view-column">
-        {activeMobileTab === 'calendar' && <><div className="intro"><p className="eyebrow">SPOLEČNÝ ČAS, BEZ CHAOSU</p><h1>Domluvit se může být<br /><em>jednoduché.</em></h1><p>Označ, kdy máš čas. Hned uvidíš, jak to mají ostatní.</p></div><CalendarGrid currentDate={currentDate} onDateChange={setCurrentDate} events={events} selectedUserFilter={selectedUserFilter} onUserFilterChange={setSelectedUserFilter} onSelectEvent={event => { setEventToEdit(event); setIsEventOpen(true); }} onDayClick={openAdd} users={users} /><div className="desktop-timeline-wrapper"><TimelineView currentDate={currentDate} events={events} users={users} onSelectEvent={event => { setEventToEdit(event); setIsEventOpen(true); }} /></div></>}
+        {activeMobileTab === 'calendar' && <><CalendarGrid currentDate={currentDate} onDateChange={setCurrentDate} events={events} selectedUserFilter={selectedUserFilter} onUserFilterChange={setSelectedUserFilter} onSelectEvent={event => { setEventToEdit(event); setIsEventOpen(true); }} onDayClick={openAdd} users={users} /><div className="desktop-timeline-wrapper"><TimelineView currentDate={currentDate} events={events} users={users} onSelectEvent={event => { setEventToEdit(event); setIsEventOpen(true); }} /></div></>}
         {activeMobileTab === 'timeline' && <TimelineView currentDate={currentDate} events={events} users={users} onSelectEvent={event => { setEventToEdit(event); setIsEventOpen(true); }} />}
       </section>
       <aside className={`sidebar-column ${activeMobileTab === 'group' ? 'mobile-show' : ''}`}><GroupOverview users={users} events={events} currentDate={currentDate} onSelectUser={setSelectedUserFilter} selectedUserFilter={selectedUserFilter} /></aside>
