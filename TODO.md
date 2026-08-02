@@ -25,3 +25,7 @@
 - [x] Admin účet (první registrovaný)
 - [x] Sdílení mezi uživateli (cloud přes Supabase)
 - [x] Redesign aplikace
+- [x] Ověření Supabase cloudu: připojení, existence tabulek users/events
+- [x] Ověření REST API: INSERT/SELECT/DELETE pro users i events (RLS funkční)
+- [x] `.env` s anon klíčem (role: anon), přidán do .gitignore
+- [x] `.env.example` obnoven jako bezpečná šablona
