@@ -38,7 +38,7 @@ export function App() {
     </main>
     <MobileNav activeTab={activeMobileTab} setActiveTab={setActiveMobileTab} currentUser={currentUser} onAddEvent={() => openAdd()} />
     <EventModal isOpen={isEventOpen} onClose={() => setIsEventOpen(false)} eventToEdit={eventToEdit} prefilledDate={prefilledDate} currentUser={currentUser} onSave={async event => { await StorageService.saveEvent(event); await reload(); }} onDelete={async id => { await StorageService.deleteEvent(id); await reload(); }} />
-    <AuthModal isOpen={isAuthOpen} onClose={() => currentUser && setIsAuthOpen(false)} onLoginSuccess={user => { login(user); setIsAuthOpen(false); }} />
+    <AuthModal isOpen={isAuthOpen} onClose={() => setIsAuthOpen(false)} onLoginSuccess={user => { login(user); setIsAuthOpen(false); }} />
   </div>;
 }
 export default App;
