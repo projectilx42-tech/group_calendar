@@ -10,8 +10,8 @@ export const EVENT_CATEGORIES = {
 export const USER_COLORS = ['#2f6fed', '#9d5c3d', '#69774c', '#8059a5', '#23857b', '#b05c71'];
 
 const KEYS = {
-  users: 'kdyspolu_users_v2',
-  session: 'kdyspolu_session_v2',
+  users: 'kdyspolu_users_v3',
+  session: 'kdyspolu_session_v3',
   events: 'kdyspolu_events_v1',
 };
 
@@ -65,38 +65,7 @@ const deriveId = async (username) => {
 
 const normalizeUsername = (name) => name.trim().replace(/\s+/g, ' ');
 
-// --- Seed účty z README ---
-const SEED_USERS = [
-  { username: 'Admin', password: 'admin123', color: '#2f6fed', isAdmin: true },
-  { username: 'Kuba', password: 'kuba123', color: '#9d5c3d', isAdmin: false },
-  { username: 'Anet', password: 'anet123', color: '#69774c', isAdmin: false },
-  { username: 'Pavel', password: 'pavel123', color: '#8059a5', isAdmin: false },
-  { username: 'Terka', password: 'terka123', color: '#23857b', isAdmin: false },
-];
-
-const ensureSeedUsers = async () => {
-  const stored = read(KEYS.users, []);
-  if (stored.length > 0) return;
-  const seeded = [];
-  for (const seed of SEED_USERS) {
-    seeded.push({
-      id: await deriveId(seed.username),
-      username: seed.username,
-      passwordHash: await hashPassword(seed.password),
-      color: seed.color,
-      isAdmin: seed.isAdmin,
-      createdAt: new Date().toISOString(),
-    });
-  }
-  write(KEYS.users, seeded);
-};
-
 export class StorageService {
-  /** Inicializace seed účtů (volá se při startu aplikace) */
-  static async init() {
-    await ensureSeedUsers();
-  }
-
   static getCurrentUser() { return read(KEYS.session, null); }
 
   /** Přihlášení jménem a heslem. Vrací uživatele nebo vyhodí chybu. */
