@@ -27,7 +27,7 @@ const write = (key, value) => {
 
 // --- Cloud helpers (pokud je Supabase nakonfigurovaný) ---
 const cloudGetUsers = async () => {
-  const { data, error } = await supabase.from('users').select('*').order('created_at', { ascending: true });
+  const { data, error } = await supabase.from('users').select('*').order('createdAt', { ascending: true });
   if (error) throw error;
   return data || [];
 };
