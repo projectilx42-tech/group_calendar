@@ -27,8 +27,9 @@ export function App() {
   const [isAuthOpen, setIsAuthOpen] = useState(false); const [isEventOpen, setIsEventOpen] = useState(false); const [eventToEdit, setEventToEdit] = useState(null); const [prefilledDate, setPrefilledDate] = useState('');
   const reload = async () => {
     const nextEvents = await StorageService.getEvents();
+    const nextUsers = await StorageService.getUsers();
     setEvents(nextEvents);
-    setUsers(collectUsers(nextEvents, StorageService.getUsers()));
+    setUsers(collectUsers(nextEvents, nextUsers));
   };
   useEffect(() => { reload(); if (!StorageService.getCurrentUser()) setIsAuthOpen(true); }, []);
   useEffect(() => { document.documentElement.dataset.theme = isDarkMode ? 'dark' : 'light'; localStorage.setItem('kdyspolu_theme', isDarkMode ? 'dark' : 'light'); }, [isDarkMode]);
